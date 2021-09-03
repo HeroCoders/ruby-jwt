@@ -29,7 +29,16 @@ module JWT
 
       algo, code = Algos.find(algorithm)
       verified = algo.verify(ToVerify.new(code, key, signing_input, signature))
-      raise(JWT::VerificationError, 'Signature verification raised') unless verified
+      unless verified
+        Raven.capture_exception(JWT::VerificationError.new( 'Signature verification raised'), level: :info, extra: {
+          algo: algo,
+          code: code,
+          key: key,
+          signing_input: signing_input,
+          signature: signature
+        })
+        #raise(JWT::VerificationError, 'Signature verification raised')
+      end
     rescue OpenSSL::PKey::PKeyError
       raise JWT::VerificationError, 'Signature verification raised'
     ensure
